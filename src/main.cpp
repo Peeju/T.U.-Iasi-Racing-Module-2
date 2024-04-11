@@ -10,6 +10,9 @@
 #define RX_GPIO_NUM   GPIO_NUM_27
 #define LOG_LEVEL LOG_LEVEL_NOTICE
 #define GPS_BAUDRATE 9600 
+#define SPIN1 GPIO_NUM_4
+#define SPIN2 GPIO_NUM_0
+#define SPIN3 GPIO_NUM_2
 
 TinyGPSPlus gps;
 u_int16_t status;
@@ -34,6 +37,9 @@ void setup() {
   Serial.begin(9600);
   Serial2.begin(GPS_BAUDRATE);
 
+  pinMode(SPIN1, INPUT);
+  pinMode(SPIN2, INPUT);
+  pinMode(SPIN3, INPUT); 
 
   Log.begin(LOG_LEVEL, &Serial);
 
@@ -62,13 +68,26 @@ void loop() {
 
   
   twai_message_t tx_msg_gps;
-  tx_msg_gps.data_length_code=7;
+  tx_msg_gps.data_length_code=8;
   tx_msg_gps.identifier=0x116;
-  //lat=46.52566262797154
-  //lng=26.9430779276816
+  /*
+  lat=46.52566262797154
+  lng=26.9430779276816
+  
   double lat=46.52566262797154;
   double lng=26.9430779276816;
   double spd = 150;
+  */
+
+  int sb2 = !digitalRead(SPIN1);
+  int sb1 = !digitalRead(SPIN2);
+  int sb0 = !digitalRead(SPIN3);
+  int gear = sb2 * 4 + sb1 * 2 + sb0;
+  tx_msg_gps.data[7] = gear;
+  Serial.print("Gear: ");
+  Serial.print(gear);
+  Serial.println();
+  
 
    #if LOG_LEVEL==LOG_LEVEL_VERBOSE
   // if(Serial2.available() > 0){
@@ -201,6 +220,5 @@ void loop() {
     status = can_start();
     if(status==ESP_OK) Log.errorln("Can driver restarted");
   }
-
 
 }
