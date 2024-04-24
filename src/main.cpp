@@ -84,10 +84,11 @@ void loop() {
   int sb0 = !digitalRead(SPIN3);
   int gear = sb2 * 4 + sb1 * 2 + sb0;
   tx_msg_gps.data[7] = gear;
+  /*
   Serial.print("Gear: ");
   Serial.print(gear);
   Serial.println();
-  
+  */
 
    #if LOG_LEVEL==LOG_LEVEL_VERBOSE
   // if(Serial2.available() > 0){
