@@ -8,7 +8,7 @@
 
 #define TX_GPIO_NUM   GPIO_NUM_14
 #define RX_GPIO_NUM   GPIO_NUM_27
-#define LOG_LEVEL LOG_LEVEL_NOTICE
+#define LOG_LEVEL LOG_LEVEL_VERBOSE
 #define GPS_BAUDRATE 9600 
 #define SPIN1 GPIO_NUM_4
 #define SPIN2 GPIO_NUM_0
@@ -73,11 +73,11 @@ void loop() {
   /*
   lat=46.52566262797154
   lng=26.9430779276816
-  
+  */
   double lat=46.52566262797154;
   double lng=26.9430779276816;
   double spd = 150;
-  */
+  
 
   int sb2 = !digitalRead(SPIN1);
   int sb1 = !digitalRead(SPIN2);
@@ -91,26 +91,27 @@ void loop() {
   */
 
    #if LOG_LEVEL==LOG_LEVEL_VERBOSE
-  // if(Serial2.available() > 0){
-  //   if (gps.encode(Serial2.read())){ 
-  //     if (gps.location.isValid()) {
-  //       lat=gps.location.lat();
-  //       lng=gps.location.lng();
-  //       Serial.println(lat);
-  //     }
-  //     else {
-  //       Log.errorln("GPS position is INVALID");
-  //     }
-  //     if(gps.speed.isValid())
-  //       spd=gps.speed.kmph(); 
-  //     else Log.errorln("GPS speed is INVALID");
-  //   }
-  //   else Log.errorln("Data from GPS is invalid");
-  // }
-  // else Log.errorln("GPS serial is not available");
+  if(Serial2.available() > 0){
+    if (gps.encode(Serial2.read())){ 
+      if (gps.location.isValid()) {
+        lat=gps.location.lat();
+        lng=gps.location.lng();
+        Serial.println(lat);
+      }
+      else {
+        Log.errorln("GPS position is INVALID");
+      }
+      if(gps.speed.isValid())
+        spd=gps.speed.kmph(); 
+      else Log.errorln("GPS speed is INVALID");
+    }
+    else Log.errorln("Data from GPS is invalid");
+  }
+  else Log.errorln("GPS serial is not available");
 
  //Log.verboseln("Latitude: %.2D, Longitude: %2.D, Speed: %2.D km/h");
    //Log.verboseln("Lat:%D, Long:%D, Spd:%D");
+ 
   Serial.print("Lat= ");
   Serial.print(lat);
   Serial.print("; Long= ");
