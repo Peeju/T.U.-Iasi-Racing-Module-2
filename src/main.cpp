@@ -4,15 +4,17 @@
 #include "driver/can.h"
 #include <TinyGPSPlus.h>
 #include "Aditional/aditional.hpp"
+#include <HardwareSerial.h>
 
 
-#define TX_GPIO_NUM   GPIO_NUM_14
-#define RX_GPIO_NUM   GPIO_NUM_27
+#define TX_GPIO_NUM   GPIO_NUM_17
+#define RX_GPIO_NUM   GPIO_NUM_16
 #define LOG_LEVEL LOG_LEVEL_VERBOSE
 #define GPS_BAUDRATE 9600 
 #define SPIN0 GPIO_NUM_33 //a0
 #define SPIN1 GPIO_NUM_12//a1
 #define SPIN2 GPIO_NUM_13 //a2
+HardwareSerial GPS_Serial(1);
 
 TinyGPSPlus gps;
 u_int16_t status;
@@ -35,7 +37,7 @@ static const can_filter_config_t f_config = CAN_FILTER_CONFIG_ACCEPT_ALL();
 
 void setup() {
   Serial.begin(9600);
-  Serial2.begin(GPS_BAUDRATE);
+  GPS_Serial.begin(9600, SERIAL_8N1, 16, 17); // RX=16, TX=17 (adjust if needed)
 
   pinMode(SPIN1, INPUT);
   pinMode(SPIN2, INPUT);
@@ -74,8 +76,8 @@ void loop() {
   lat=46.52566262797154
   lng=26.9430779276816
   */
-  double lat=46.52566262797154;
-  double lng=26.9430779276816;
+  double lat=0;
+  double lng=0;
   double spd = 150;
   
 
@@ -91,40 +93,52 @@ void loop() {
   int gear = sb0 * 4 + sb1 * 2 + sb2;
   tx_msg_gps.data[7] = gear;
   
-  Serial.print("Gear: ");
-  Serial.print(gear);
-  Serial.println();
+  //Serial.print("Gear: ");
+  //Serial.print(gear);
+  //Serial.println();
   
 
    #if LOG_LEVEL==LOG_LEVEL_VERBOSE
-  if(Serial2.available() > 0){
-    if (gps.encode(Serial2.read())){ 
-      if (gps.location.isValid()) {
-        lat=gps.location.lat();
-        lng=gps.location.lng();
-        //Serial.println(lat);
-      }
-      else {
-        Log.errorln("GPS position is INVALID");
-      }
-      if(gps.speed.isValid())
-        spd=gps.speed.kmph(); 
-      else Log.errorln("GPS speed is INVALID");
-    }
-    else Log.errorln("Data from GPS is invalid");
-  }
+   //Serial.println("OK");
+  //  while(!Serial2.available()){}
+  // if(Serial2.available() > 0){
+  //   Serial.print("OK");
+  //   if (gps.encode(Serial2.read())){ 
+  //     Serial.print("OK");
+  //     if (gps.location.isValid()) {
+  //       lat=gps.location.lat();
+  //       lng=gps.location.lng();
+  //       Serial.println(lat);
+  //     }
+  //     else {
+  //       Log.errorln("GPS position is INVALID");
+  //     }
+  //     if(gps.speed.isValid())
+  //       spd=gps.speed.kmph(); 
+  //     else Log.errorln("GPS speed is INVALID");
+  //   }
+  //   else Log.errorln("Data from GPS is invalid");
+  // }
   //else Log.errorln("GPS serial is not available");
 
  //Log.verboseln("Latitude: %.2D, Longitude: %2.D, Speed: %2.D km/h");
    //Log.verboseln("Lat:%D, Long:%D, Spd:%D");
- 
-  // Serial.print("Lat= ");
-  // Serial.print(lat,9);
-  // Serial.print("; Long= ");
-  // Serial.println(lng,9);
+
+   while (GPS_Serial.available() > 0) {
+    gps.encode(GPS_Serial.read());
+  }
+  lat = gps.location.lat();
+  lng = gps.location.lng();
+  spd = gps.speed.kmph();
+
+  
+   Serial.print("Lat= ");
+   Serial.print(lat,9);
+   Serial.print("; Long= ");
+   Serial.println(lng,9);
   // Serial.println(gear);
-  // Serial.println();
-  // convert(fractional(lat), tx_msg_gps.data);
+   Serial.println();
+  convert(fractional(lat), tx_msg_gps.data);
   convert(fractional(lng), tx_msg_gps.data+3);
   tx_msg_gps.data[6]=uint8_t(spd);
 
