@@ -10,9 +10,9 @@
 #define RX_GPIO_NUM   GPIO_NUM_27
 #define LOG_LEVEL LOG_LEVEL_VERBOSE
 #define GPS_BAUDRATE 9600 
-#define SPIN1 GPIO_NUM_4
-#define SPIN2 GPIO_NUM_0
-#define SPIN3 GPIO_NUM_2
+#define SPIN0 GPIO_NUM_33 //a0
+#define SPIN1 GPIO_NUM_12//a1
+#define SPIN2 GPIO_NUM_13 //a2
 
 TinyGPSPlus gps;
 u_int16_t status;
@@ -39,7 +39,7 @@ void setup() {
 
   pinMode(SPIN1, INPUT);
   pinMode(SPIN2, INPUT);
-  pinMode(SPIN3, INPUT); 
+  pinMode(SPIN0, INPUT); 
 
   Log.begin(LOG_LEVEL, &Serial);
 
@@ -79,16 +79,22 @@ void loop() {
   double spd = 150;
   
 
-  int sb2 = !digitalRead(SPIN1);
-  int sb1 = !digitalRead(SPIN2);
-  int sb0 = !digitalRead(SPIN3);
-  int gear = sb2 * 4 + sb1 * 2 + sb0;
+  int sb2 = !digitalRead(SPIN2);
+  int sb1 = !digitalRead(SPIN1);
+  int sb0 = !digitalRead(SPIN0);
+  //Serial.print("   ");
+  //Serial.print(sb2);
+  //Serial.print("   ");
+  //Serial.print(sb1);
+  //Serial.print("   ");
+  //Serial.println(sb0);
+  int gear = sb0 * 4 + sb1 * 2 + sb2;
   tx_msg_gps.data[7] = gear;
-  /*
+  
   Serial.print("Gear: ");
   Serial.print(gear);
   Serial.println();
-  */
+  
 
    #if LOG_LEVEL==LOG_LEVEL_VERBOSE
   if(Serial2.available() > 0){
@@ -96,7 +102,7 @@ void loop() {
       if (gps.location.isValid()) {
         lat=gps.location.lat();
         lng=gps.location.lng();
-        Serial.println(lat);
+        //Serial.println(lat);
       }
       else {
         Log.errorln("GPS position is INVALID");
@@ -107,16 +113,18 @@ void loop() {
     }
     else Log.errorln("Data from GPS is invalid");
   }
-  else Log.errorln("GPS serial is not available");
+  //else Log.errorln("GPS serial is not available");
 
  //Log.verboseln("Latitude: %.2D, Longitude: %2.D, Speed: %2.D km/h");
    //Log.verboseln("Lat:%D, Long:%D, Spd:%D");
  
-  Serial.print("Lat= ");
-  Serial.print(lat);
-  Serial.print("; Long= ");
-  Serial.println(lng);
-  convert(fractional(lat), tx_msg_gps.data);
+  // Serial.print("Lat= ");
+  // Serial.print(lat,9);
+  // Serial.print("; Long= ");
+  // Serial.println(lng,9);
+  // Serial.println(gear);
+  // Serial.println();
+  // convert(fractional(lat), tx_msg_gps.data);
   convert(fractional(lng), tx_msg_gps.data+3);
   tx_msg_gps.data[6]=uint8_t(spd);
 
@@ -125,7 +133,7 @@ void loop() {
   int d2 = brakePressure.getVoltage();
   int d3 = steeringAngle.getVoltage();
   int d4 = oilPressure.getVoltage();
-  Log.verboseln("BSPD: %d, Brake pressure: %d, Steering Angle: %d, Oil Pressure: %d", d1, d2, d3, d4);
+  //Log.verboseln("BSPD: %d, Brake pressure: %d, Steering Angle: %d, Oil Pressure: %d", d1, d2, d3, d4);
 
  
   
@@ -198,7 +206,7 @@ void loop() {
 
     status = can_transmit(&tx_msg_adc, pdMS_TO_TICKS(1000));
   if(status==ESP_OK) {
-    Log.noticeln("Can message sent");
+    //Log.noticeln("Can message sent");
   }
   else {
     Log.errorln("Can message sending failed with error code: %s ;\nRestarting CAN driver", esp_err_to_name(status));
@@ -212,7 +220,7 @@ void loop() {
   
     status = can_transmit(&tx_msg_gps, pdMS_TO_TICKS(1000));
   if(status==ESP_OK) {
-    Log.noticeln("Can message sent");
+    //Log.noticeln("Can message sent");
   }
   else {
     Log.errorln("Can message sending failed with error code: %s ;\nRestarting CAN driver", esp_err_to_name(status));
