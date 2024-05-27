@@ -7,8 +7,8 @@
 #include <HardwareSerial.h>
 
 
-#define TX_GPIO_NUM   GPIO_NUM_17
-#define RX_GPIO_NUM   GPIO_NUM_16
+#define TX_GPIO_NUM   GPIO_NUM_16 //inversate??
+#define RX_GPIO_NUM   GPIO_NUM_17
 #define LOG_LEVEL LOG_LEVEL_VERBOSE
 #define GPS_BAUDRATE 9600 
 #define SPIN0 GPIO_NUM_33 //a0
