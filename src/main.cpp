@@ -7,13 +7,13 @@
 #include <HardwareSerial.h>
 
 
-#define TX_GPIO_NUM   GPIO_NUM_16 //inversate??
-#define RX_GPIO_NUM   GPIO_NUM_17
+#define TX_GPIO_NUM   GPIO_NUM_17 //inversate??
+#define RX_GPIO_NUM   GPIO_NUM_16
 #define LOG_LEVEL LOG_LEVEL_VERBOSE
 #define GPS_BAUDRATE 9600 
 #define SPIN0 GPIO_NUM_33 //a0
 #define SPIN1 GPIO_NUM_12//a1
-#define SPIN2 GPIO_NUM_13 //a2
+#define SPIN2 GPIO_NUM_2 //a2
 HardwareSerial GPS_Serial(1);
 
 TinyGPSPlus gps;
@@ -93,9 +93,9 @@ void loop() {
   int gear = sb0 * 4 + sb1 * 2 + sb2;
   tx_msg_gps.data[7] = gear;
   
-  //Serial.print("Gear: ");
-  //Serial.print(gear);
-  //Serial.println();
+  Serial.print("Gear: ");
+  Serial.print(gear);
+  Serial.println();
   
 
    #if LOG_LEVEL==LOG_LEVEL_VERBOSE
@@ -124,18 +124,18 @@ void loop() {
  //Log.verboseln("Latitude: %.2D, Longitude: %2.D, Speed: %2.D km/h");
    //Log.verboseln("Lat:%D, Long:%D, Spd:%D");
 
-   while (GPS_Serial.available() > 0) {
-    gps.encode(GPS_Serial.read());
-  }
-  lat = gps.location.lat();
-  lng = gps.location.lng();
-  spd = gps.speed.kmph();
+  //  while (GPS_Serial.available() > 0) {
+  //   gps.encode(GPS_Serial.read());
+  // }
+  // lat = gps.location.lat();
+  // lng = gps.location.lng();
+  // spd = gps.speed.kmph();
 
   
-   Serial.print("Lat= ");
-   Serial.print(lat,9);
-   Serial.print("; Long= ");
-   Serial.println(lng,9);
+  //  Serial.print("Lat= ");
+  //  Serial.print(lat,9);
+  //  Serial.print("; Long= ");
+  //  Serial.println(lng,9);
   // Serial.println(gear);
    Serial.println();
   convert(fractional(lat), tx_msg_gps.data);
