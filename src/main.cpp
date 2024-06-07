@@ -7,29 +7,31 @@
 #include <HardwareSerial.h>
 
 
-#define TX_GPIO_NUM   GPIO_NUM_17 //inversate??
-#define RX_GPIO_NUM   GPIO_NUM_16
+#define TX_GPIO_NUM   GPIO_NUM_14 //inversate??
+#define RX_GPIO_NUM   GPIO_NUM_27
 #define LOG_LEVEL LOG_LEVEL_VERBOSE
 #define GPS_BAUDRATE 9600 
-#define SPIN0 GPIO_NUM_33 //a0
-#define SPIN1 GPIO_NUM_12//a1
-#define SPIN2 GPIO_NUM_2 //a2
+// #define SPIN0 GPIO_NUM_33 //a0
+// #define SPIN1 GPIO_NUM_12//a1
+// #define SPIN2 GPIO_NUM_2 //a2
 HardwareSerial GPS_Serial(1);
 
 
 u_int16_t status;
-adcObj BSPD(ADC1_CHANNEL_4);
+//adcObj BSPD(ADC1_CHANNEL_5);
 adcObj brakePressure(ADC1_CHANNEL_4);
-adcObj steeringAngle(ADC1_CHANNEL_4);
+adcObj steeringAngle(ADC1_CHANNEL_7);
 adcObj oilPressure(ADC1_CHANNEL_4);
 
-long latitude;
-long longitude;
-long speed;
+long latitude=0;
+long longitude=0;
+long speed=0;
 
 
 char nmeaBuffer[100];
 MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
+twai_message_t tx_msg_gps;
+twai_message_t tx_msg_adc;
 
 //todo: ADC: BSPD, brake pressure, steering angle, oil pressure
 //todo: GPS: lat, long, speed
@@ -42,14 +44,19 @@ static const can_general_config_t g_config = {.mode = TWAI_MODE_NO_ACK, .tx_io =
 static const can_timing_config_t t_config = CAN_TIMING_CONFIG_500KBITS();
 static const can_filter_config_t f_config = CAN_FILTER_CONFIG_ACCEPT_ALL();
 
-
 void setup() {
   Serial.begin(9600);
   GPS_Serial.begin(9600, SERIAL_8N1, 16, 17); // RX=17, TX=16 
 
-  pinMode(SPIN1, INPUT);
-  pinMode(SPIN2, INPUT);
-  pinMode(SPIN0, INPUT); 
+  // pinMode(SPIN1, INPUT);
+  // pinMode(SPIN2, INPUT);
+  // pinMode(SPIN0, INPUT); 
+  pinMode(2, INPUT_PULLUP);//1
+  pinMode(12, INPUT_PULLUP);//2
+  pinMode(4, INPUT_PULLUP);//3
+  pinMode(14, INPUT_PULLUP);//3
+  pinMode(15, INPUT_PULLUP);//3
+  pinMode(5, INPUT_PULLUP);//
 
   Log.begin(LOG_LEVEL, &Serial);
 
@@ -68,47 +75,65 @@ void setup() {
     else {
       Log.errorln("Can starting procedure failed with error: %s", esp_err_to_name(status));
     }
+
+    tx_msg_adc.data_length_code=8;
+    tx_msg_adc.identifier=0x115;
+    tx_msg_adc.flags=CAN_MSG_FLAG_NONE;
+  
+    tx_msg_gps.data_length_code=8;
+    tx_msg_gps.identifier=0x116;
+    tx_msg_gps.flags=CAN_MSG_FLAG_NONE;
+  
 }
 
 void loop() {
 
-  twai_message_t tx_msg_adc;
-  tx_msg_adc.data_length_code=8;
-  tx_msg_adc.identifier=0x115;
+ int gear = 0; 
+ int a1 = digitalRead(2);
+ int a2 = digitalRead(2);
+ int a3 = digitalRead(12);
+ int a4 = digitalRead(5);
+ int a5 = digitalRead(15);
+ int a6 = digitalRead(14);
 
-  
-  twai_message_t tx_msg_gps;
-  tx_msg_gps.data_length_code=8;
-  tx_msg_gps.identifier=0x116;
-  
+ if (a1 == 0)
+    gear = 1;
+ if (a2 == 0)
+    gear = 2;
+ if (a3 == 0)
+    gear = 3;
+ if (a4 == 0)
+    gear = 4;
+ if (a5 == 0)
+    gear = 5;
+ if (a6 == 0)
+    gear = 6;
 
-  int sb2 = !digitalRead(SPIN2);
-  int sb1 = !digitalRead(SPIN1);
-  int sb0 = !digitalRead(SPIN0);
-
-  int gear = sb0 * 4 + sb1 * 2 + sb2;
-  tx_msg_gps.data[7] = gear;
+  tx_msg_adc.data[6] = gear;
+  Log.noticeln("Gear: %d", gear);
 
   while (GPS_Serial.available()) {
     char c = GPS_Serial.read();
     nmea.process(c);
+    //Log.verbose("In while la GPS");
   }
   if (nmea.isValid()) {
     latitude = nmea.getLatitude();
     longitude = nmea.getLongitude();
     speed = nmea.getSpeed();
+    Log.verbose("In if la GPS");
   }
 
-  convert(latitude, tx_msg_gps.data);
-  convert(longitude, tx_msg_gps.data+3);
-  tx_msg_gps.data[6]=uint8_t(speed);
+  // convert(latitude, tx_msg_gps.data);
+  // convert(longitude, tx_msg_gps.data+3);
+  // tx_msg_gps.data[6]=uint8_t(speed);
 
 
   #if LOG_LEVEL==LOG_LEVEL_VERBOSE
 
-  Serial.print("Gear: ");
-  Serial.print(gear);
-  Serial.println();
+  // Serial.print("Gear: ");
+  // Serial.print(gear);
+  // Serial.println();
 
   Serial.print("Latitude: ");
   Serial.println(latitude / 1000000.0, 6);
@@ -116,13 +141,17 @@ void loop() {
   Serial.println(longitude / 1000000.0, 6);
   Serial.print("Speed: ");
   Serial.println(speed / 1000.0);
+  latitude = latitude%1000000;
+  longitude = longitude%1000000;
+  
+  //Log.noticeln("Latitude: %d, Longitude: %d, Speed: %d", latitude*1000000.0, longitude*1000000.0, speed*1000.0);
 
   convert(latitude, tx_msg_gps.data);
   convert(longitude, tx_msg_gps.data+3);
   tx_msg_gps.data[6]=uint8_t(speed);
 
 
-  int d1 = BSPD.getVoltage();
+  //int d1 = BSPD.getVoltage();
   int d2 = brakePressure.getVoltage();
   int d3 = steeringAngle.getVoltage();
   int d4 = oilPressure.getVoltage();
@@ -130,14 +159,14 @@ void loop() {
 
  
   
-  tx_msg_adc.data[0]=d1/100;
-  tx_msg_adc.data[1]=d1%100;
-  tx_msg_adc.data[2]=d2/100;
-  tx_msg_adc.data[3]=d2%100;
-  tx_msg_adc.data[4]=d3/100;
-  tx_msg_adc.data[5]=d3%100;
-  tx_msg_adc.data[6]=d4/100;
-  tx_msg_adc.data[7]=d4%100;
+  // tx_msg_adc.data[0]=d1/100;
+  // tx_msg_adc.data[1]=d1%100;
+  tx_msg_adc.data[0]=d2/100;
+  tx_msg_adc.data[1]=d2%100;
+  tx_msg_adc.data[2]=d3/100;
+  tx_msg_adc.data[3]=d3%100;
+  tx_msg_adc.data[4]=d4/100;
+  tx_msg_adc.data[5]=d4%100;
 
 
   #else
@@ -199,7 +228,7 @@ void loop() {
 
     status = can_transmit(&tx_msg_adc, pdMS_TO_TICKS(1000));
   if(status==ESP_OK) {
-    //Log.noticeln("Can message sent");
+    Log.noticeln("Can message ADC sent");
   }
   else {
     Log.errorln("Can message sending failed with error code: %s ;\nRestarting CAN driver", esp_err_to_name(status));
@@ -213,7 +242,7 @@ void loop() {
   
     status = can_transmit(&tx_msg_gps, pdMS_TO_TICKS(1000));
   if(status==ESP_OK) {
-    //Log.noticeln("Can message sent");
+    Log.noticeln("Can message GPS sent");
   }
   else {
     Log.errorln("Can message sending failed with error code: %s ;\nRestarting CAN driver", esp_err_to_name(status));
@@ -223,5 +252,6 @@ void loop() {
     status = can_start();
     if(status==ESP_OK) Log.errorln("Can driver restarted");
   }
+  vTaskDelay(pdMS_TO_TICKS(100));
 
 }
