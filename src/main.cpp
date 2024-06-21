@@ -38,7 +38,7 @@ twai_message_t tx_msg_adc;
 
 static const can_general_config_t g_config = {.mode = TWAI_MODE_NO_ACK, .tx_io = TX_GPIO_NUM, .rx_io = RX_GPIO_NUM,        
                                                                     .clkout_io = TWAI_IO_UNUSED, .bus_off_io = TWAI_IO_UNUSED,      
-                                                                    .tx_queue_len = 1, .rx_queue_len = 5,                           
+                                                                    .tx_queue_len = 1000, .rx_queue_len = 5,                           
                                                                     .alerts_enabled = TWAI_ALERT_ALL,  .clkout_divider = 0,        
                                                                     .intr_flags = ESP_INTR_FLAG_LEVEL1};
 static const can_timing_config_t t_config = CAN_TIMING_CONFIG_500KBITS();
@@ -54,7 +54,7 @@ void setup() {
   pinMode(2, INPUT_PULLUP);//1
   pinMode(12, INPUT_PULLUP);//2
   pinMode(4, INPUT_PULLUP);//3
-  pinMode(14, INPUT_PULLUP);//3
+  pinMode(32, INPUT_PULLUP);//3
   pinMode(15, INPUT_PULLUP);//3
   pinMode(5, INPUT_PULLUP);//
 
@@ -90,24 +90,26 @@ void loop() {
 
  int gear = 0; 
  int a1 = digitalRead(2);
- int a2 = digitalRead(2);
+ int a2 = digitalRead(4);
  int a3 = digitalRead(12);
  int a4 = digitalRead(5);
  int a5 = digitalRead(15);
- int a6 = digitalRead(14);
+ int a6 = digitalRead(32);
 
  if (a1 == 0)
     gear = 1;
- if (a2 == 0)
+ else if (a2 == 0)
     gear = 2;
- if (a3 == 0)
-    gear = 3;
- if (a4 == 0)
+ else if (a3 == 0)
     gear = 4;
- if (a5 == 0)
-    gear = 5;
- if (a6 == 0)
+ else if (a4 == 0)
+    gear = 3;
+ else if (a5 == 0)
     gear = 6;
+//  else if (a6 == 0)
+//     gear = 5;
+ else
+    gear = 0;
 
   tx_msg_adc.data[6] = gear;
   Log.noticeln("Gear: %d", gear);
@@ -124,9 +126,6 @@ void loop() {
     Log.verbose("In if la GPS");
   }
 
-  // convert(latitude, tx_msg_gps.data);
-  // convert(longitude, tx_msg_gps.data+3);
-  // tx_msg_gps.data[6]=uint8_t(speed);
 
 
   #if LOG_LEVEL==LOG_LEVEL_VERBOSE
@@ -135,20 +134,20 @@ void loop() {
   // Serial.print(gear);
   // Serial.println();
 
-  Serial.print("Latitude: ");
-  Serial.println(latitude / 1000000.0, 6);
-  Serial.print("Longitude: ");
-  Serial.println(longitude / 1000000.0, 6);
-  Serial.print("Speed: ");
-  Serial.println(speed / 1000.0);
-  latitude = latitude%1000000;
-  longitude = longitude%1000000;
+  // Serial.print("Latitude: ");
+  // Serial.println(latitude / 1000000.0, 6);
+  // Serial.print("Longitude: ");
+  // Serial.println(longitude / 1000000.0, 6);
+  // Serial.print("Speed: ");
+  // Serial.println(speed / 1000.0);
+   latitude = latitude%1000000;
+   longitude = longitude%1000000;
   
   //Log.noticeln("Latitude: %d, Longitude: %d, Speed: %d", latitude*1000000.0, longitude*1000000.0, speed*1000.0);
 
   convert(latitude, tx_msg_gps.data);
   convert(longitude, tx_msg_gps.data+3);
-  tx_msg_gps.data[6]=uint8_t(speed);
+  tx_msg_gps.data[7]=uint8_t(speed);
 
 
   //int d1 = BSPD.getVoltage();
@@ -228,7 +227,7 @@ void loop() {
 
     status = can_transmit(&tx_msg_adc, pdMS_TO_TICKS(1000));
   if(status==ESP_OK) {
-    Log.noticeln("Can message ADC sent");
+    //Log.noticeln("Can message ADC sent");
   }
   else {
     Log.errorln("Can message sending failed with error code: %s ;\nRestarting CAN driver", esp_err_to_name(status));
@@ -242,7 +241,7 @@ void loop() {
   
     status = can_transmit(&tx_msg_gps, pdMS_TO_TICKS(1000));
   if(status==ESP_OK) {
-    Log.noticeln("Can message GPS sent");
+    //Log.noticeln("Can message GPS sent");
   }
   else {
     Log.errorln("Can message sending failed with error code: %s ;\nRestarting CAN driver", esp_err_to_name(status));
@@ -252,6 +251,6 @@ void loop() {
     status = can_start();
     if(status==ESP_OK) Log.errorln("Can driver restarted");
   }
-  vTaskDelay(pdMS_TO_TICKS(100));
+  //vTaskDelay(pdMS_TO_TICKS(100));
 
 }
