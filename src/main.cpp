@@ -2,7 +2,7 @@
 #include "ArduinoLog.h"
 #include "adcObj/adcObj.hpp"
 #include "driver/can.h"
-#include <MicroNMEA.h>
+#include <TinyGPS++.h>
 #include "Aditional/aditional.hpp"
 #include <HardwareSerial.h>
 
@@ -13,8 +13,7 @@
 #define GPS_BAUDRATE 9600 
 // #define SPIN0 GPIO_NUM_33 //a0
 // #define SPIN1 GPIO_NUM_12//a1
-// #define SPIN2 GPIO_NUM_2 //a2
-HardwareSerial GPS_Serial(1);
+// #define SPIN2 GPIO_NUM_2 //a2 
 
 
 u_int16_t status;
@@ -23,13 +22,12 @@ adcObj brakePressure(ADC1_CHANNEL_4);
 adcObj steeringAngle(ADC1_CHANNEL_7);
 adcObj oilPressure(ADC1_CHANNEL_4);
 
-long latitude=0;
-long longitude=0;
-long speed=0;
+double latitude=0;
+double longitude=0;
+double speed=0;
 
+TinyGPSPlus gps;
 
-char nmeaBuffer[100];
-MicroNMEA nmea(nmeaBuffer, sizeof(nmeaBuffer));
 twai_message_t tx_msg_gps;
 twai_message_t tx_msg_adc;
 
@@ -46,8 +44,7 @@ static const can_filter_config_t f_config = CAN_FILTER_CONFIG_ACCEPT_ALL();
 
 void setup() {
   Serial.begin(9600);
-  GPS_Serial.begin(9600, SERIAL_8N1, 16, 17); // RX=17, TX=16 
-
+  Serial2.begin(GPS_BAUDRATE);
   // pinMode(SPIN1, INPUT);
   // pinMode(SPIN2, INPUT);
   // pinMode(SPIN0, INPUT); 
@@ -113,18 +110,28 @@ void loop() {
 
   tx_msg_adc.data[6] = gear;
   Log.noticeln("Gear: %d", gear);
+if (Serial2.available() > 0) {
+      if (gps.encode(Serial2.read())) {
+        if (gps.location.isValid()) {
+          latitude = gps.location.lat();
+          longitude = gps.location.lng();
+        }
+        if (gps.speed.isValid()) {
+          speed = gps.speed.kmph();
 
-  while (GPS_Serial.available()) {
-    char c = GPS_Serial.read();
-    nmea.process(c);
-    //Log.verbose("In while la GPS");
-  }
-  if (nmea.isValid()) {
-    latitude = nmea.getLatitude();
-    longitude = nmea.getLongitude();
-    speed = nmea.getSpeed();
-    Log.verbose("In if la GPS");
-  }
+        } 
+      }
+    }
+   // Log.noticeln("Latitude: %d, Longitude: %d, Speed: %l", latitude, longitude, speed);
+
+  Serial.print("Latitude: ");
+  Serial.println(latitude, 6);
+  Serial.print("Longitude: ");
+  Serial.println(longitude, 6);
+  Serial.print("Speed: ");
+  Serial.println(speed);
+  
+
 
 
 
@@ -133,21 +140,12 @@ void loop() {
   // Serial.print("Gear: ");
   // Serial.print(gear);
   // Serial.println();
-
-  // Serial.print("Latitude: ");
-  // Serial.println(latitude / 1000000.0, 6);
-  // Serial.print("Longitude: ");
-  // Serial.println(longitude / 1000000.0, 6);
-  // Serial.print("Speed: ");
-  // Serial.println(speed / 1000.0);
-   latitude = latitude%1000000;
-   longitude = longitude%1000000;
   
-  //Log.noticeln("Latitude: %d, Longitude: %d, Speed: %d", latitude*1000000.0, longitude*1000000.0, speed*1000.0);
+  // Log.noticeln("Latitude: %d, Longitude: %d, Speed: %l", latitude, longitude, speed);
 
-  convert(latitude, tx_msg_gps.data);
-  convert(longitude, tx_msg_gps.data+3);
-  tx_msg_gps.data[7]=uint8_t(speed);
+  convert(fractional(latitude), tx_msg_gps.data);
+  convert(fractional(longitude), tx_msg_gps.data+3);
+  tx_msg_gps.data[6]=uint8_t(speed);
 
 
   //int d1 = BSPD.getVoltage();
@@ -157,7 +155,6 @@ void loop() {
   //Log.verboseln("BSPD: %d, Brake pressure: %d, Steering Angle: %d, Oil Pressure: %d", d1, d2, d3, d4);
 
  
-  
   // tx_msg_adc.data[0]=d1/100;
   // tx_msg_adc.data[1]=d1%100;
   tx_msg_adc.data[0]=d2/100;
@@ -225,7 +222,7 @@ void loop() {
   #endif
 
 
-    status = can_transmit(&tx_msg_adc, pdMS_TO_TICKS(1000));
+  status = can_transmit(&tx_msg_adc, pdMS_TO_TICKS(1000));
   if(status==ESP_OK) {
     //Log.noticeln("Can message ADC sent");
   }
