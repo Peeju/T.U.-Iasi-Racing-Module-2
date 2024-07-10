@@ -10,14 +10,14 @@
 
 #define TX_GPIO_NUM   GPIO_NUM_14 //inversate??
 #define RX_GPIO_NUM   GPIO_NUM_27
-#define LOG_LEVEL LOG_LEVEL_VERBOSE
+#define LOG_LEVEL LOG_LEVEL_ERROR
 #define GPS_BAUDRATE 9600 
 // #define SPIN0 GPIO_NUM_33 //a0
 // #define SPIN1 GPIO_NUM_12//a1
 // #define SPIN2 GPIO_NUM_2 //a2 
 
 u_int16_t status;
-//adcObj BSPD(ADC1_CHANNEL_5);
+adcObj BSPD(ADC1_CHANNEL_5);
 adcObj brakePressure(ADC1_CHANNEL_4);
 adcObj steeringAngle(ADC1_CHANNEL_7);
 adcObj oilPressure(ADC1_CHANNEL_4);
@@ -105,13 +105,14 @@ void loop() {
     gear = 3;
  else if (a5 == 0)
     gear = 6;
-//  else if (a6 == 0)
 //     gear = 5;
  else
     gear = 0;
 
-  tx_msg_adc.data[6] = gear;
-  Log.noticeln("Gear: %d", gear);
+tx_msg_adc.data[6] = gear;
+convert(gear, tx_msg_adc.data+6);
+
+Log.noticeln("Gear: %d", gear);
 if (Serial2.available() > 0) {
       if (gps.encode(Serial2.read())) {
         if (gps.location.isValid()) {
@@ -217,14 +218,16 @@ if (Serial2.available() > 0) {
   //     tx_msg_gps.data[6]=0xdd;
   //   }
 
-  tx_msg_adc.data[0]=BSPD.getVoltage()/100;
-  tx_msg_adc.data[1]=BSPD.getVoltage()%100;
-  tx_msg_adc.data[2]=brakePressure.getVoltage()/100;
-  tx_msg_adc.data[3]=brakePressure.getVoltage()%100;
-  tx_msg_adc.data[4]=steeringAngle.getVoltage()/100;
-  tx_msg_adc.data[5]=steeringAngle.getVoltage()%100;
-  tx_msg_adc.data[6]=oilPressure.getVoltage()/100;
-  tx_msg_adc.data[7]=oilPressure.getVoltage()%100;
+  tx_msg_adc.data[0]=int(BSPD.KalmanVoltage())/100;
+  tx_msg_adc.data[1]=int(BSPD.KalmanVoltage())%100;
+
+  tx_msg_adc.data[2]=int(brakePressure.KalmanVoltage())/100;
+  tx_msg_adc.data[3]=int(brakePressure.KalmanVoltage())%100;
+
+  tx_msg_adc.data[4]=int(steeringAngle.KalmanVoltage())/100;
+  tx_msg_adc.data[5]=int(steeringAngle.KalmanVoltage())%100;
+  //tx_msg_adc.data[6]=oilPressure.KalmanVoltage()/100;
+  //tx_msg_adc.data[7]=oilPressure.KalmanVoltage()%100;
   #endif
 
 
