@@ -1,4 +1,5 @@
 #include <Arduino.h>
+
 #include "ArduinoLog.h"
 #include "adcObj/adcObj.hpp"
 #include "driver/can.h"
@@ -15,12 +16,12 @@
 // #define SPIN1 GPIO_NUM_12//a1
 // #define SPIN2 GPIO_NUM_2 //a2 
 
-
 u_int16_t status;
 //adcObj BSPD(ADC1_CHANNEL_5);
 adcObj brakePressure(ADC1_CHANNEL_4);
 adcObj steeringAngle(ADC1_CHANNEL_7);
 adcObj oilPressure(ADC1_CHANNEL_4);
+
 
 double latitude=0;
 double longitude=0;
@@ -43,6 +44,7 @@ static const can_timing_config_t t_config = CAN_TIMING_CONFIG_500KBITS();
 static const can_filter_config_t f_config = CAN_FILTER_CONFIG_ACCEPT_ALL();
 
 void setup() {
+  delay(2000);
   Serial.begin(9600);
   Serial2.begin(GPS_BAUDRATE);
   // pinMode(SPIN1, INPUT);
@@ -80,7 +82,7 @@ void setup() {
     tx_msg_gps.data_length_code=8;
     tx_msg_gps.identifier=0x116;
     tx_msg_gps.flags=CAN_MSG_FLAG_NONE;
-  
+    
 }
 
 void loop() {
@@ -145,9 +147,13 @@ if (Serial2.available() > 0) {
 
   convert(fractional(latitude), tx_msg_gps.data);
   convert(fractional(longitude), tx_msg_gps.data+3);
-  tx_msg_gps.data[6]=uint8_t(speed);
+  
 
+  tx_msg_gps.data[7]=uint8_t(speed);
 
+  Serial.print(tx_msg_gps.data[0]);
+  Serial.print(tx_msg_gps.data[1]);
+  Serial.print(tx_msg_gps.data[2]);
   //int d1 = BSPD.getVoltage();
   int d2 = brakePressure.getVoltage();
   int d3 = steeringAngle.getVoltage();
