@@ -110,7 +110,6 @@ void loop() {
     gear = 0;
 
 tx_msg_adc.data[6] = gear;
-convert(gear, tx_msg_adc.data+6);
 
 Log.noticeln("Gear: %d", gear);
 if (Serial2.available() > 0) {
